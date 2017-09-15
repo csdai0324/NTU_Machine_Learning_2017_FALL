@@ -10,7 +10,7 @@ def half_pixel_value(img):
 		new_pixels.append(tuple([int(value/2) for value in list(pixel_value)]))
 	new_img = Image.new('RGB', (width, height))
 	new_img.putdata(new_pixels)
-	new_img.save('Q2.jpg')
+	new_img.save('Q2.png')
 
 if __name__ == '__main__':
 
