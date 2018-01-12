@@ -4,92 +4,35 @@ import numpy as np
 import skimage
 from skimage import io
 
-class PCA:
-    def __init__(self, images_path):
-        self.images_path = images_path
-        self.images_array = self.get_images()
+def get_images(images_path):
+    files = os.path.join(images_path, '*.jpg')
+    images_collection = io.ImageCollection(files)
+    images_array = images_collection.concatenate().reshape(415, -1) 
+    return images_array
 
-    def get_images(self):
-        files = os.path.join(self.images_path, '*.jpg')
-        images_collection = io.ImageCollection(
-            files)  # class ImageCollection, len=415
-        images_array = images_collection.concatenate().reshape(
-            415, -1)  # shape = (415, 1080000)
-        return images_array
+def reconstruct_faces(images_path, target_image, top):
+    images_array = get_images(images_path)
+    target = io.imread(target_image)
+    target = target.reshape(1, -1) 
+    mean_img = np.mean(images_array, axis=0)
+    X = images_array - mean_img
+    U, s, V = np.linalg.svd(X.T, full_matrices=False)
 
-    def print_specific_face(self, index):
-        specific_face = self.images_array[index, :].reshape(600, 600, 3)
-        io.imshow(specific_face)
-        io.imsave('./specific/face_id={}.jpg'.format(index), specific_face)
+    target_a = target - mean_img  # shape = (1, 1080000)
 
-    def plot_average_face(self):
-        mean_image_array = np.mean(self.images_array, axis=0)
-        average_face = np.array(
-            mean_image_array, dtype=np.uint8).reshape(600, 600, 3)
-        # print(mean_image_array)
-        # print(average_face)
-        io.imsave('./average/average_face.jpg', average_face)
-
-    def plot_eigen_faces(self, top=10):
-        mean_img = np.mean(self.images_array, axis=0)
-        # shape = (415, 1080000)
-        array_a = self.images_array - mean_img
-        # print(new_images_array.shape)
-
-        # U, s, V shapes= (1080000, 415), (415,), (415, 415)
-        U, s, V = np.linalg.svd(array_a.T, full_matrices=False)
-
-        for i in range(top):
-            eigen_face = -U[:, i].reshape(600, 600, 3)
-            M = eigen_face
-            M -= np.min(M)
-            M /= np.max(M)
-            M = (M * 255).astype(np.uint8)
-            eigen_face = M
-            io.imsave('./eigen/eigen_face_id={}.jpg'.format(i), eigen_face)
-
-    def compute_RMSE(self, arr1, arr2):
-        return np.sqrt(np.average((arr1 - arr2) ** 2))
-
-    def reconstruct_faces(self, target_image, top):
-        target = io.imread(target_image)
-        target = target.reshape(1, -1)  # shape = (1, 1080000)
-
-        mean_img = np.mean(self.images_array, axis=0)
-        array_a = self.images_array - mean_img
-
-        # U shape = (1080000, 415)
-        U, s, V = np.linalg.svd(array_a.T, full_matrices=False)
-
-        target_a = target - mean_img  # shape = (1, 1080000)
-
-        weights = np.dot(target_a, U)
-
-        recon = mean_img + np.dot(weights[:, :top], U[:, :top].T)
-
-        recon -= np.min(recon)
-        recon /= np.max(recon)
-        recon = (recon * 255).astype(np.uint8)
-        recon = recon.reshape(600, 600, 3)
-
-        io.imsave('./reconstruction.jpg'.format(target_image), recon)
-
-    def calculate_ratio(self, top=4):
-        mean_img = np.mean(self.images_array, axis=0)
-        array_a = self.images_array - mean_img
-        U, s, V = np.linalg.svd(array_a.T, full_matrices=False)
-
-        s_sum = np.sum(s)
-        print(s_sum)
-        for i in range(top):
-            print(s[i] / s_sum)
+    weights = np.dot(target_a, U)
+    recon = mean_img + np.dot(weights[:, :top], U[:, :top].T)
+    recon -= np.min(recon)
+    recon /= np.max(recon)
+    recon = (recon * 255).astype(np.uint8)
+    recon = recon.reshape(600, 600, 3)
+    io.imsave('./reconstruction.jpg'.format(target_image), recon)
 
 
 def main():
     images_path = sys.argv[1]
     target_path = sys.argv[2]
-    pca = PCA(images_path)
-    pca.reconstruct_faces(target_path, 4)
+    reconstruct_faces(images_path, target_path, 4)
 
 if __name__ == '__main__':
     main()
