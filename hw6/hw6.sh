@@ -1,0 +1,1 @@
+python3 test_hw6.py $1 $2 $3
